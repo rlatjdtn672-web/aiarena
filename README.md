@@ -80,6 +80,55 @@ def act(obs, mask):
 
 ---
 
+## 학습시키기
+
+손으로 짠 봇은 금방 한계가 온다. 직관이 자주 틀리기 때문이다.
+여기서부터는 **점수만 주고 나머지는 맡긴다.**
+
+```bash
+pip install torch
+python -m aiarena.train.ppo --foe spread --updates 400
+```
+
+싸우는 법은 한 줄도 안 알려준다. 점수가 높은 행동만 남는 것뿐이다.
+
+### 점수표가 성격을 만든다
+
+`aiarena/core/reward.py` 가 이 판에서 **유일하게 창작인 자리**다.
+
+| 항목 | 기본값 | 올리면 |
+|---|---|---|
+| `enemy_hp` | 3.0 | 적 체력을 깎으러 달려든다 |
+| `ally_hp` | 0.3 | 제 몸을 사린다 |
+| `kill` / `death` | 2.0 / 1.0 | 마무리를 챙긴다 / 죽는 걸 무서워한다 |
+| `win` / `lose` | 10.0 | 끝을 본다 |
+| **`timeout`** | **25.0** | ★ **낮추면 "안 싸우고 버티기"가 최적해가 된다** |
+| `step` | 0.001 | 조급해진다 |
+
+미리 만들어둔 점수표로 성격을 비교해볼 수 있다:
+
+```bash
+python -m aiarena.train.ppo --reward 겁쟁이     # 내 몸 사리기
+python -m aiarena.train.ppo --reward 돌격대     # 내 피해를 안 센다
+python -m aiarena.train.ppo --reward 속전속결   # 빨리 끝내라
+```
+
+같은 판, 같은 코드인데 **완전히 다르게 싸운다.** 이게 이 판의 본론이다.
+
+### 학습한 망을 봇으로 내기
+
+계약이 같아서 그대로 쓸 수 있다.
+
+```python
+import torch
+from aiarena.train.ppo import Policy, make_bot
+
+p = Policy(); p.load_state_dict(torch.load("runs/ppo/best.pt")["model"])
+act = make_bot(p)        # 이게 바로 봇이다
+```
+
+---
+
 ## 붙여보기
 
 ```bash
