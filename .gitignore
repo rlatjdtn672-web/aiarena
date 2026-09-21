@@ -1,5 +1,16 @@
+# 게임 파일 — 블리자드 소유. 절대 커밋하지 않는다
+data/mpq/*.mpq
+data/mpq/*.MPQ
+
+# 학습 결과
+runs/
+*.pt
+
+# 빌드 산출물
+engine/bwmicro_sp
+engine/*.o
+engine/*.dSYM/
+
 __pycache__/
 *.pyc
 .DS_Store
-runs/
-*.pt
