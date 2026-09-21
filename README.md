@@ -115,6 +115,24 @@ python -m aiarena.train.ppo --reward 속전속결   # 빨리 끝내라
 
 같은 판, 같은 코드인데 **완전히 다르게 싸운다.** 이게 이 판의 본론이다.
 
+### 지금 최고 기록
+
+| | 총점 (72판) |
+|---|---|
+| 손코딩 최고 (무빙샷) | 53 · **73.6%** |
+| **학습 최고** | **70 · 97.2%** |
+
+맨땅에서 배우면 오히려 **30.6%** 밖에 안 나온다. 한 상대만 외워버리기 때문이다.
+무엇이 되고 무엇이 안 됐는지는 [실험 기록](docs/실험기록.md)에 실패까지 그대로 적어뒀다.
+따라 하다 같은 데서 넘어지지 않게.
+
+```bash
+python -m aiarena.train.clone --teacher kite          # 먼저 베끼고 (30초)
+python -m aiarena.train.ppo --foe mixed \
+       --init runs/clone/cloned.pt --lr 1e-4          # 이어서 배운다
+python tools/compare.py runs/clone_ft/best.pt         # 기준선과 나란히 본다
+```
+
 ### 학습한 망을 봇으로 내기
 
 계약이 같아서 그대로 쓸 수 있다.

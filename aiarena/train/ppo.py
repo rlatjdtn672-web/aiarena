@@ -104,6 +104,8 @@ def main():
     ap.add_argument("--ent", type=float, default=0.01)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default="runs/ppo")
+    ap.add_argument("--init", default=None,
+                    help="여기서부터 이어서 배운다 (보통 베낀 망). train.clone 참고")
     ap.add_argument("--eval-every", type=int, default=20)
     args = ap.parse_args()
 
@@ -132,6 +134,10 @@ def main():
 
     env = ArenaEnv(sc, foe, reward=rc)
     policy = Policy()
+    if args.init:
+        ck = torch.load(args.init, weights_only=False)
+        policy.load_state_dict(ck["model"])
+        print(f"이어서 배웁니다: {args.init}")
     opt = torch.optim.Adam(policy.parameters(), lr=args.lr)
     os.makedirs(args.out, exist_ok=True)
 
