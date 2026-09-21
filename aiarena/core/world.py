@@ -85,11 +85,16 @@ class World:
         self._rng = random.Random(0)
 
     # ── 판 열기 ──────────────────────────────────────────────────────────
-    def reset(self, seed: int) -> None:
+    def reset(self, seed: int, gap: Optional[int] = None,
+              spread: Optional[int] = None) -> None:
+        """gap/spread 를 직접 주면 씨앗을 무시한다.
+        다른 언어로 옮긴 엔진과 대조할 때 쓴다 — 난수 생성기가 달라도 같은 판을 열 수 있다."""
         sc = self.sc
         self._rng = random.Random(seed)
-        gap = self._rng.randint(sc.gap_lo, sc.gap_hi)
-        spread = self._rng.randint(sc.spread_lo, sc.spread_hi)
+        if gap is None:
+            gap = self._rng.randint(sc.gap_lo, sc.gap_hi)
+        if spread is None:
+            spread = self._rng.randint(sc.spread_lo, sc.spread_hi)
 
         self.teams = [[], []]
         for team, (unit_key, count, sign) in enumerate(
