@@ -1,8 +1,9 @@
-# 여기에 게임 파일을 넣으세요
+# 여기에 게임 파일이 들어갑니다
 
-`StarDat.mpq`, `BrooDat.mpq`, `patch_rt.mpq` 세 개입니다.
+`StarDat.mpq`, `BrooDat.mpq`, `patch_rt.mpq` 세 개입니다. 이렇게 받으세요:
 
-원작 스타크래프트는 블리자드가 무료로 배포합니다 — 받는 방법은
-[setup/게임파일.md](../../setup/게임파일.md) 를 보세요.
+```bash
+bash setup/get_mpq.sh
+```
 
-이 파일들은 블리자드 소유라 저장소에 포함하지 않습니다.
+블리자드가 AI 연구용으로 공식 배포하는 파일입니다. 자세한 건 [setup/게임파일.md](../../setup/게임파일.md).

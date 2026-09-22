@@ -9,7 +9,8 @@
 git clone --recursive https://github.com/rlatjdtn672-web/aiarena
 cd aiarena
 
-# 1. 게임 파일 준비 (원작 스타크래프트는 무료입니다 → setup/게임파일.md)
+# 1. 게임 파일 받기 (블리자드 공식 AI 연구용 · 약관 동의)
+bash setup/get_mpq.sh
 # 2. 빌드
 cd engine && ./build.sh && cd ..
 # 3. 확인
@@ -116,7 +117,7 @@ external/openbw     OpenBW (서브모듈)
 
 ## 필요한 것
 
-- **스타크래프트 게임 파일** — 원작은 무료입니다. [setup/게임파일.md](setup/게임파일.md)
+- **스타크래프트 게임 파일** — 블리자드가 AI 연구용으로 공식 배포합니다. `bash setup/get_mpq.sh` ([자세히](setup/게임파일.md))
 - **C++17 컴파일러 + SDL2** — `brew install sdl2 sdl2_mixer sdl2_image`
 - **Python 3.11+, PyTorch, NumPy**
 
@@ -126,5 +127,6 @@ GPU는 필요 없습니다. 맥북 한 대로 돌아갑니다.
 
 이 저장소의 코드는 MIT 입니다.
 
-게임 파일(`.mpq`)은 블리자드 소유라 포함하지 않습니다 — 각자 자기 게임에서 가져옵니다.
+게임 파일(`.mpq`)은 블리자드 소유라 포함하지 않습니다 — 각자 블리자드의 AI 연구용 배포본을 받습니다.
+그 약관상 **AI·머신러닝 연구 목적으로만** 쓸 수 있고, 상업적 이용과 재배포는 안 됩니다.
 `external/openbw` 는 별도 프로젝트이고 그쪽 조건을 따릅니다.

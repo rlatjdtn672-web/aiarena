@@ -109,7 +109,7 @@ def check_files():
     if missing:
         sys.exit(f"게임 파일이 없습니다: {', '.join(missing)}\n"
                  f"  넣을 곳: {MPQ}\n"
-                 f"  준비 방법: setup/게임파일.md (스타크래프트 원작은 무료입니다)")
+                 f"  받는 법: bash setup/get_mpq.sh  (블리자드 공식 AI 연구용)")
     if not os.path.exists(BIN):
         sys.exit(f"학습 환경이 빌드되지 않았습니다: {BIN}\n"
                  f"  빌드: cd engine && ./build.sh")
