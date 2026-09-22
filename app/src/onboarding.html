@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>스타 AI 스튜디오</title>
+<style>
+  :root {
+    --bg: #111318; --card: #1a1d24; --line: #2a2e38; --ink: #eceef3; --dim: #9aa1b1;
+    --green: #6fdc8c; --blue: #6cb8f5; --red: #ff7a7a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center; padding: 32px;
+  }
+  .wrap { width: min(640px, 100%); }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.3px; }
+  .sub { color: var(--dim); margin: 0 0 28px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 22px 24px; margin-bottom: 14px;
+  }
+  .card h2 { font-size: 16px; margin: 0 0 8px; }
+  .card p { margin: 0 0 10px; color: var(--dim); font-size: 14px; }
+  .card p:last-child { margin-bottom: 0; }
+  .btn {
+    display: block; width: 100%; border: 0; border-radius: 12px; padding: 15px 18px;
+    font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 10px;
+  }
+  .btn.primary { background: var(--green); color: #0d1a12; }
+  .btn.ghost { background: transparent; color: var(--dim); border: 1px solid var(--line); font-weight: 500; font-size: 14px; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .bar { height: 10px; background: #0c0e12; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; margin: 12px 0 6px; }
+  .bar > div { height: 100%; width: 0%; background: var(--blue); transition: width .2s; }
+  .small { font-size: 13px; color: var(--dim); }
+  .eula {
+    background: #0c0e12; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+    height: 230px; overflow: auto; white-space: pre-wrap; font: 12px/1.55 ui-monospace, Menlo, monospace; color: #c9ced9;
+  }
+  ul.points { margin: 0 0 12px; padding-left: 18px; color: var(--ink); font-size: 14px; }
+  ul.points li { margin: 3px 0; }
+  .err { color: var(--red); font-size: 14px; margin-top: 10px; }
+  .foot { color: #6b7282; font-size: 12px; margin-top: 18px; line-height: 1.6; }
+  [hidden] { display: none !important; }
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: var(--green);
+             border-radius: 50%; animation: spin 0.9s linear infinite; margin: 8px auto 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .center { text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>스타 AI 스튜디오</h1>
+  <p class="sub">벌처 1기로 저글링 6마리 잡는 법을 AI 가 스스로 배웁니다. 점수만 정해주세요.</p>
+
+  <!-- 1. 게임 파일이 필요함 -->
+  <section id="s-need">
+    <div class="card">
+      <h2>처음 한 번, 게임 파일이 필요합니다</h2>
+      <p>블리자드가 <b>AI 연구용</b>으로 스타크래프트 게임 파일을 공식 배포하고 있습니다.
+         블리자드 서버에서 직접 받고, 약관에 동의하면 바로 시작할 수 있어요.</p>
+      <p class="small">약 87MB · 블리자드 계정 필요 없음 · 한 번만 받으면 됩니다</p>
+      <button class="btn primary" id="b-dl">블리자드에서 받기</button>
+      <button class="btn ghost" id="b-pick">이미 파일이 있어요 (폴더 고르기)</button>
+    </div>
+  </section>
+
+  <!-- 2. 받는 중 -->
+  <section id="s-dl" hidden>
+    <div class="card">
+      <h2>블리자드 서버에서 받는 중</h2>
+      <div class="bar"><div id="bar"></div></div>
+      <div class="small" id="dl-msg">&nbsp;</div>
+    </div>
+  </section>
+
+  <!-- 3. 약관 -->
+  <section id="s-eula" hidden>
+    <div class="card">
+      <h2>블리자드 AI·머신러닝 약관</h2>
+      <ul class="points">
+        <li><b>AI 테스트·머신러닝·연구 목적</b>으로만 쓸 수 있습니다</li>
+        <li>이 파일에는 일반 약관의 <b>자동화(봇) 금지가 적용되지 않습니다</b></li>
+        <li>학습으로 만든 AI 와 데이터는 본인 것입니다</li>
+        <li>게임 파일 자체를 <b>팔거나 남에게 다시 나눠주면 안 됩니다</b></li>
+      </ul>
+      <div class="eula" id="eula"></div>
+      <button class="btn primary" id="b-agree">동의하고 시작하기</button>
+      <button class="btn ghost" id="b-deny">동의하지 않음</button>
+    </div>
+  </section>
+
+  <!-- 4. 켜는 중 -->
+  <section id="s-start" hidden>
+    <div class="card center">
+      <div class="spinner"></div>
+      <h2>스튜디오를 켜는 중</h2>
+      <p class="small">처음엔 10초 정도 걸립니다</p>
+    </div>
+  </section>
+
+  <div class="err" id="err" hidden></div>
+
+  <p class="foot">블리자드 엔터테인먼트와 관계없는 비공식 연구 도구입니다.
+     게임 파일은 블리자드 AI·머신러닝 약관에 따라 이 컴퓨터 안에서만 쓰입니다.
+     StarCraft 는 Blizzard Entertainment 의 상표입니다.</p>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const show = (id) => {
+  for (const s of ["s-need", "s-dl", "s-eula", "s-start"]) $(s).hidden = s !== id;
+};
+const err = (m) => { $("err").hidden = !m; $("err").textContent = m || ""; };
+let api = null, poll = null;
+
+async function start() {
+  show("s-start"); err("");
+  const r = await api.start();
+  if (r && r.error) { err(r.error); show("s-need"); }
+}
+
+function render(st) {
+  if (st.stage === "downloading" || st.stage === "extracting") {
+    show("s-dl");
+    $("bar").style.width = (st.pct || 0) + "%";
+    $("dl-msg").textContent = st.msg || "";
+  } else if (st.stage === "eula") {
+    clearInterval(poll); poll = null;
+    $("eula").textContent = st.eula;
+    show("s-eula");
+  } else if (st.stage === "ready") {
+    clearInterval(poll); poll = null;
+    start();
+  } else if (st.stage === "error") {
+    clearInterval(poll); poll = null;
+    err(st.msg); show("s-need");
+  }
+}
+
+window.addEventListener("pywebviewready", async () => {
+  api = window.pywebview.api;
+  const st = await api.status();
+  if (st.have) return start();
+  show("s-need");
+
+  $("b-dl").onclick = async () => {
+    err("");
+    render(await api.download());
+    poll = setInterval(async () => render(await api.status()), 300);
+  };
+  $("b-pick").onclick = async () => { err(""); render(await api.pick_folder()); };
+  $("b-agree").onclick = async () => { $("b-agree").disabled = true; render(await api.agree()); };
+  $("b-deny").onclick = () => { err("약관에 동의해야 쓸 수 있습니다. 창을 닫으면 끝납니다."); show("s-need"); };
+});
+</script>
+</body>
+</html>

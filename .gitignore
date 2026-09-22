@@ -14,3 +14,7 @@ engine/*.dSYM/
 __pycache__/
 *.pyc
 .DS_Store
+
+# 맥 앱 빌드 산출물
+app/build/
+app/dist/

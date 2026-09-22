@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>스타 AI 스튜디오</title>
+<style>
+:root{
+  --bg:#0e1014; --card:#171a21; --line:#252a34; --dim:#8b93a1; --txt:#e8ecf2;
+  --good:#3ddc84; --p0:#4fc3f7; --bad:#ff6b6b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);
+     font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+header{display:flex;align-items:center;gap:14px;padding:14px 22px;
+       border-bottom:1px solid var(--line);background:#12151b}
+header .dot{width:9px;height:9px;border-radius:50%;background:var(--dim)}
+header.run .dot{background:var(--good);box-shadow:0 0 10px var(--good)}
+header h1{margin:0;font-size:17px;font-weight:800}
+header .sub{color:var(--dim);font-size:14px}
+header .sp{flex:1}
+.btn{padding:9px 16px;border-radius:9px;border:1px solid var(--line);background:#1c2029;
+     font-weight:700;font-size:14px}
+.btn:hover{border-color:#3a4150}
+.btn.stop{background:#2a1b1e;color:var(--bad);border-color:#43272c}
+
+main{padding:22px;max-width:1500px;margin:0 auto}
+
+.start{max-width:680px;margin:7vh auto;text-align:center}
+.start .big{font-size:26px;font-weight:800;margin-bottom:8px}
+.start .desc{color:var(--dim);margin-bottom:28px}
+.bigbtn{display:block;width:100%;padding:22px;border-radius:14px;
+        background:var(--good);color:#06210f;font-size:20px;font-weight:800;margin-top:22px}
+.bigbtn:disabled{opacity:.5}
+
+.fold{border:1px solid var(--line);border-radius:12px;background:var(--card);text-align:left}
+.fold > .head{display:flex;align-items:center;gap:10px;padding:15px 18px;width:100%;font-weight:700}
+.fold > .head .arrow{margin-left:auto;color:var(--dim);transition:transform .15s}
+.fold.open > .head .arrow{transform:rotate(90deg)}
+.fold > .body{display:none;padding:4px 18px 18px;border-top:1px solid var(--line)}
+.fold.open > .body{display:block}
+.knob{display:grid;grid-template-columns:1fr 84px;gap:8px 14px;align-items:center;
+      padding:12px 0;border-bottom:1px solid #1e222b}
+.knob:last-child{border-bottom:0}
+.knob .nm{font-weight:600;font-size:14px}
+.knob .ds{color:var(--dim);font-size:12.5px;margin-top:2px}
+.knob .vl{text-align:right;font-weight:800;font-size:16px}
+.knob input[type=range]{grid-column:1/3;width:100%;accent-color:var(--good)}
+
+.grid{display:grid;grid-template-columns:1.15fr 1fr;gap:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.card h2{margin:0 0 14px;font-size:14px;font-weight:700;color:var(--dim)}
+
+.cam{position:relative;background:#000;border-radius:10px;overflow:hidden;
+     aspect-ratio:16/9;display:flex;align-items:center;justify-content:center}
+.cam img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+.cam .none{position:absolute;color:var(--dim);font-size:14px}
+.vs{display:flex;gap:10px;margin-top:12px;font-size:14px;flex-wrap:wrap}
+.vs span{padding:6px 12px;border-radius:8px;background:#1d222b;font-weight:700}
+.vs .l{color:var(--p0)} .vs .r{color:var(--dim)}
+
+.huge{font-size:76px;font-weight:800;line-height:1;margin:6px 0}
+.huge small{font-size:26px;color:var(--dim);margin-left:4px}
+.sub2{color:var(--dim);font-size:14px}
+canvas{width:100%;display:block;border-radius:8px}
+
+.acts{display:flex;flex-direction:column;gap:11px}
+.row{display:grid;grid-template-columns:84px 1fr 50px;gap:12px;align-items:center}
+.row .lb{font-size:14px;font-weight:600}
+.bar{height:14px;border-radius:7px;background:#1e222b;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:7px;transition:width .4s}
+.row .pc{text-align:right;font-weight:800;font-size:15px}
+
+.gens{display:flex;flex-wrap:wrap;gap:9px}
+.chip{padding:10px 15px;border-radius:10px;border:1px solid var(--line);
+      background:#1c2029;font-weight:700;font-size:14px;white-space:nowrap;text-align:center}
+.chip:hover{border-color:#48505f}
+.chip.on{background:var(--p0);color:#04222e;border-color:transparent}
+.chip b{font-size:11.5px;color:var(--dim);display:block;font-weight:600}
+.chip.on b{color:#0b3a4a}
+.chip.best{border-color:#f2c14e;box-shadow:0 0 0 1px #f2c14e inset}
+.chip.best b{color:#f2c14e}
+.chip.best.on{background:#f2c14e;color:#3a2c05}
+.chip.best.on b{color:#5a4408}
+#bestLine{margin:2px 0 12px;font-size:13px;color:var(--dim)}
+#bestLine b{color:#f2c14e}
+#btnBest{padding:7px 13px;border-radius:9px;border:1px solid var(--line);
+  background:transparent;color:var(--dim);font:inherit;font-size:12.5px;cursor:pointer}
+#btnBest:hover{border-color:#f2c14e;color:#f2c14e}
+.hint{color:var(--dim);font-size:13px;margin-top:10px}
+.goal{display:flex;gap:9px;margin:18px 0 2px}
+.goal button{flex:1;padding:13px 8px;border-radius:11px;border:1px solid var(--line);
+             background:#1c2029;font-weight:700;font-size:15px}
+.goal button b{display:block;font-size:12px;color:var(--dim);font-weight:600;margin-top:3px}
+.goal button.on{background:var(--p0);color:#04222e;border-color:transparent}
+.goal button.on b{color:#0b3a4a}
+.prog{height:8px;border-radius:5px;background:#1e222b;overflow:hidden;margin:12px 0 6px}
+.prog i{display:block;height:100%;background:var(--good);border-radius:5px;transition:width .5s}
+.hist{width:100%;border-collapse:collapse;font-size:14px}
+.hist th{text-align:left;color:var(--dim);font-weight:600;font-size:12.5px;padding:6px 10px 6px 0;
+         border-bottom:1px solid var(--line)}
+.hist td{padding:9px 10px 9px 0;border-bottom:1px solid #1e222b}
+.hist tr:last-child td{border-bottom:0}
+.hist .now{color:var(--good);font-weight:700}
+.empty{color:var(--dim);font-size:14px;padding:6px 0}
+</style>
+</head>
+<body>
+
+<header id="hd">
+  <span class="dot"></span>
+  <h1>스타 AI 스튜디오</h1>
+  <span class="sub" id="presetName">…</span>
+  <span class="sp"></span>
+  <span class="sub" id="stat"></span>
+  <button class="btn" id="btnCfg" hidden>점수 설정</button>
+  <button class="btn stop" id="btnStop" hidden>멈추기</button>
+  <button class="btn" id="btnCast">녹화 화면</button>
+</header>
+
+<main>
+  <section id="setup">
+    <div class="start">
+      <div class="big" id="sName">…</div>
+      <div class="desc" id="sDesc"></div>
+
+      <div class="fold" id="fold">
+        <button class="head" id="foldHead">점수 설정 바꾸기<span class="arrow">›</span></button>
+        <div class="body" id="knobs"></div>
+      </div>
+
+      <div style="text-align:left;margin-top:22px">
+        <div style="font-weight:700;font-size:14px;color:var(--dim)">몇 판까지 돌릴까요?</div>
+        <div class="goal" id="goal"></div>
+        <div class="hint" style="margin-top:6px">목표에 닿으면 스스로 멈춥니다. 중간에 [멈추기]로 끊어도 됩니다.</div>
+      </div>
+
+      <button class="bigbtn" id="btnGo">▶&nbsp; 돌리기</button>
+      <div class="hint">기본값 그대로 눌러도 됩니다. 돌리는 중에도 바꿀 수 있어요.</div>
+
+      <div class="card" style="margin-top:34px;text-align:left" id="histCard" hidden>
+        <h2>지난 실험</h2>
+        <table class="hist"><thead><tr>
+          <th>이름</th><th>판</th><th>승률</th><th>물러나기</th><th>시간</th>
+        </tr></thead><tbody id="histBody"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <section id="live" hidden>
+    <div class="grid">
+      <div class="card">
+        <h2>지금 벌어지는 판</h2>
+        <div class="cam">
+          <img id="cam" alt="">
+          <span class="none" id="camNone">게임 화면을 기다리는 중…</span>
+        </div>
+        <div class="vs">
+          <span class="l" id="vsL">왼쪽 · —</span>
+          <span class="r" id="vsR">오른쪽 · —</span>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="card">
+          <h2>이긴 비율</h2>
+          <div class="huge num" id="huge">—<small>%</small></div>
+          <div class="sub2" id="sub2">아직 판이 안 돌았습니다</div>
+          <div class="prog"><i id="progBar" style="width:0%"></i></div>
+          <div class="sub2 num" id="progTxt"></div>
+        </div>
+        <div class="card">
+          <h2>얼마나 늘고 있나</h2>
+          <canvas id="chart" height="150"></canvas>
+        </div>
+        <div class="card">
+          <h2>얘가 지금 하는 것</h2>
+          <div class="acts" id="acts"></div>
+          <div class="hint">적은 오른쪽에 있습니다. 그래서 오른쪽으로 가는 게 다가가기예요.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <h2>세대별로 다시 보기 — 누르면 그때의 AI가 학습 전 AI와 붙습니다</h2>
+      <div id="bestLine">가장 잘하는 세대는 학습이 끝나면 자동으로 찾습니다.
+        <button id="btnBest">지금 찾기</button></div>
+      <div class="gens" id="gens"><span class="empty">세대가 쌓이면 여기에 버튼이 생깁니다.</span></div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* 화면에 보이는 손잡이는 이게 전부입니다. 나머지는 안전한 기본값으로 잠급니다. */
+var KNOBS = [
+  {k:"r-timeout",  n:"시간만 끌면",  d:"낮으면 얘가 안 싸우고 시간만 보냅니다", lo:0, hi:6000, st:100},
+  {k:"r-enemy-hp", n:"적 체력 깎기", d:"적을 때렸을 때 주는 점수",              lo:0, hi:600,  st:10},
+  {k:"r-kill",     n:"적 잡기",      d:"적 하나를 없앴을 때",                   lo:0, hi:600,  st:10},
+  {k:"r-ally-hp",  n:"내 체력 잃기", d:"★ 이게 낮으면 맞고 지나가는 게 이득이 됩니다", lo:0, hi:900, st:20},
+  {k:"r-death",    n:"내 유닛 죽기", d:"내 유닛이 죽었을 때 빼는 점수",         lo:0, hi:900,  st:20},
+  {k:"r-win",      n:"이기면",       d:"판을 이겼을 때",                        lo:0, hi:4000, st:100},
+  {k:"r-lose",     n:"지면",         d:"판을 졌을 때 빼는 점수",                lo:0, hi:4000, st:100},
+  {k:"frame-skip", n:"판단 주기",    d:"몇 프레임마다 한 번 명령할지. 곧 손 속도입니다", lo:2, hi:12, st:1},
+  {k:"ent",        n:"탐험 정도",    d:"낮으면 한 전략에만 굳습니다",           lo:0, hi:0.05, st:0.005}
+];
+
+/* 이동 1~8 은 8방향입니다.
+   1 위 · 2 오른위 · 3 오른 · 4 오른아래 · 5 아래 · 6 왼아래 · 7 왼 · 8 왼위
+   적이 오른쪽에 있으니 2·3·4 가 다가가기, 6·7·8 과 후퇴(11)가 물러나기입니다.
+   12칸을 그대로 보여주면 읽을 수가 없어서 네 덩어리로 묶습니다. */
+var GROUPS = [
+  {n:"다가가기", c:"#ff9f43", ix:[2,3,4]},
+  {n:"물러나기", c:"#3ddc84", ix:[6,7,8,11]},
+  {n:"가만히",   c:"#4fc3f7", ix:[0,9,10]},
+  {n:"위아래",   c:"#6b7280", ix:[1,5]}
+];
+
+var S = {st:{}, curve:[], last:null, gens:[], best:null, bestState:{}, watching:null, vals:{}, inited:false,
+         target:30000, runs:[]};
+
+/* 목표 판수 — 학습은 끝없이 돌 수 있으므로 어디서 멈출지 먼저 정한다.
+   시간은 실측(초당 약 90~120판) 기준 어림이다. */
+var GOALS = [
+  {v:10000,  n:"1만 판",  t:"약 2분"},
+  {v:30000,  n:"3만 판",  t:"약 6분"},
+  {v:100000, n:"10만 판", t:"약 20분"},
+  {v:0,      n:"끝까지",  t:"직접 멈춤"}
+];
+function drawGoal(){
+  var box = document.querySelector("#goal"); box.innerHTML = "";
+  GOALS.forEach(function(g){
+    var b = document.createElement("button");
+    b.className = (S.target === g.v ? "on" : "");
+    b.innerHTML = g.n + "<b>" + g.t + "</b>";
+    b.onclick = function(){ S.target = g.v; drawGoal(); };
+    box.appendChild(b);
+  });
+}
+function $(q){ return document.querySelector(q); }
+function comma(n){ return (n||0).toLocaleString("ko-KR"); }
+function fmt(h, v){
+  if (h.k === "ent") return (+v).toFixed(3);
+  if (h.k === "frame-skip") return v + "프레임";
+  return String(v);
+}
+
+/* ── 손잡이 ─────────────────────────────────────────────── */
+function buildKnobs(init){
+  var box = $("#knobs"); box.innerHTML = "";
+  KNOBS.forEach(function(h){
+    var v = (init && init[h.k] != null) ? init[h.k] : h.lo;
+    S.vals[h.k] = v;
+    var el = document.createElement("div");
+    el.className = "knob";
+    el.innerHTML = '<div><div class="nm">' + h.n + '</div><div class="ds">' + h.d + '</div></div>'
+      + '<div class="vl num" id="v_' + h.k + '">' + fmt(h, v) + '</div>'
+      + '<input type="range" min="' + h.lo + '" max="' + h.hi + '" step="' + h.st + '" value="' + v + '">';
+    var inp = el.querySelector("input");
+    inp.oninput = function(){
+      var nv = h.st < 1 ? parseFloat(inp.value) : parseInt(inp.value, 10);
+      S.vals[h.k] = nv;
+      $("#v_" + h.k).textContent = fmt(h, nv);
+    };
+    box.appendChild(el);
+  });
+}
+
+/* ── 그래프: 선 하나 ────────────────────────────────────── */
+function drawChart(){
+  var c = $("#chart");
+  if (!c.clientWidth) return;
+  if (c.width !== c.clientWidth) c.width = c.clientWidth;
+  var g = c.getContext("2d"), W = c.width, H = c.height;
+  g.clearRect(0, 0, W, H);
+  var L = 40, R = 10, T = 12, B = 22, iw = W - L - R, ih = H - T - B;
+
+  g.strokeStyle = "#252a34"; g.fillStyle = "#8b93a1";
+  g.font = "11px -apple-system, sans-serif"; g.textAlign = "right";
+  [0, 50, 100].forEach(function(p){
+    var y = T + ih * (1 - p / 100);
+    g.beginPath(); g.moveTo(L, y); g.lineTo(W - R, y); g.stroke();
+    g.fillText(p + "%", L - 7, y + 4);
+  });
+
+  if (S.curve.length < 2){
+    g.textAlign = "center"; g.fillStyle = "#8b93a1";
+    g.fillText("판이 쌓이면 선이 그려집니다", W / 2, H / 2);
+    return;
+  }
+  var src = S.curve, step = Math.max(1, Math.floor(src.length / 200)), pts = [];
+  for (var i = 0; i < src.length; i += step) pts.push(src[i]);
+  pts.push(src[src.length - 1]);
+  var maxEp = pts[pts.length - 1].ep || 1;
+
+  g.beginPath();
+  pts.forEach(function(d, i){
+    var x = L + iw * (d.ep / maxEp);
+    var y = T + ih * (1 - Math.max(0, Math.min(1, d.wr)));
+    if (i) g.lineTo(x, y); else g.moveTo(x, y);
+  });
+  g.strokeStyle = "#3ddc84"; g.lineWidth = 2.5; g.lineJoin = "round"; g.stroke();
+
+  g.fillStyle = "#8b93a1"; g.textAlign = "left"; g.fillText("0판", L, H - 6);
+  g.textAlign = "right"; g.fillText(comma(maxEp) + "판", W - R, H - 6);
+}
+
+/* ── 행동 ───────────────────────────────────────────────── */
+function drawActs(a){
+  var box = $("#acts");
+  if (!a){ box.innerHTML = '<div class="empty">아직 자료가 없습니다.</div>'; return; }
+  box.innerHTML = "";
+  GROUPS.forEach(function(d){
+    var p = 0; d.ix.forEach(function(i){ p += (a[i] || 0); }); p *= 100;
+    var el = document.createElement("div");
+    el.className = "row";
+    el.innerHTML = '<div class="lb">' + d.n + '</div>'
+      + '<div class="bar"><i style="width:' + p.toFixed(1) + '%;background:' + d.c + '"></i></div>'
+      + '<div class="pc num">' + p.toFixed(0) + '%</div>';
+    box.appendChild(el);
+  });
+}
+
+/* ── 세대별 보기 ────────────────────────────────────────── */
+var MILE = [0, 1000, 3000, 10000, 20000, 30000, 50000, 100000];
+function drawGens(){
+  var box = $("#gens");
+  if (!S.gens.length){
+    box.innerHTML = '<span class="empty">세대가 쌓이면 여기에 버튼이 생깁니다.</span>';
+    return;
+  }
+  var maxEp = S.gens[S.gens.length - 1].ep, picked = [];
+  MILE.forEach(function(m){
+    if (m > maxEp + 500) return;
+    var best = S.gens[0];
+    S.gens.forEach(function(g){ if (Math.abs(g.ep - m) < Math.abs(best.ep - m)) best = g; });
+    var dup = picked.some(function(x){ return x.gen === best.gen; });
+    if (!dup) picked.push(best);
+  });
+  var last = S.gens[S.gens.length - 1];
+  if (!picked.some(function(x){ return x.gen === last.gen; })) picked.push(last);
+  /* 최고 세대는 마일스톤에 안 걸려도 반드시 넣는다. 이게 제일 볼 만한 판이다. */
+  var bg = S.best && S.best.gen;
+  if (bg != null && !picked.some(function(x){ return x.gen === bg; })){
+    var f = null;
+    S.gens.forEach(function(x){ if (x.gen === bg) f = x; });
+    if (f) picked.push(f);
+  }
+  picked.sort(function(a, b){ return a.ep - b.ep; });
+
+  box.innerHTML = "";
+  picked.forEach(function(g){
+    var b = document.createElement("button");
+    var isBest = (bg != null && g.gen === bg);
+    b.className = "chip" + (S.watching === g.gen ? " on" : "") + (isBest ? " best" : "");
+    b.innerHTML = (isBest ? "★ " : "") + (g.ep === 0 ? "학습 전" : comma(g.ep) + "판")
+                + "<b>" + (isBest ? "가장 잘함" : "세대 " + g.gen) + "</b>";
+    b.onclick = function(){ watchGen(g.gen); };
+    box.appendChild(b);
+  });
+}
+/* 최고 세대 줄. 찾는 중이면 진행률을, 끝났으면 성적을 보여준다. */
+function drawBest(){
+  var el = $("#bestLine"), b = S.best, st = S.bestState || {};
+  var 진행 = (st.state === "넓게 훑는 중" || st.state === "상위 3개 다시 재는 중");
+  var txt;
+  if (진행){
+    txt = st.state + " … " + (st.progress || 0) + (st.total ? " / " + st.total : "") + "개";
+  } else if (b && b.gen != null){
+    txt = "가장 잘하는 세대 <b>" + comma(b.ep) + "판</b> — 이긴 비율 <b>"
+        + Math.round(b.wr * 100) + "%</b> · 드라군 생존 <b>" + b.surv + "/2</b>";
+  } else {
+    txt = "가장 잘하는 세대는 학습이 끝나면 자동으로 찾습니다.";
+  }
+  el.innerHTML = txt + ' <button id="btnBest">'
+    + (진행 ? "찾는 중…" : "지금 찾기") + '</button>';
+  var btn = $("#btnBest");
+  btn.disabled = 진행;
+  btn.onclick = function(){
+    fetch("/api/best", {method:"POST"}).then(function(r){ return r.json(); })
+      .then(function(v){ S.bestState = v; drawBest(); });
+  };
+}
+function watchGen(gen){
+  S.watching = gen; drawGens();
+  fetch("/api/watch", {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({left:"gen:" + gen, right:"gen0", speed:1})});
+}
+
+/* ── 갱신 ───────────────────────────────────────────────── */
+/* v042(세대 42) 같은 파일 이름을 사람이 읽는 말로 바꾼다 */
+function 세대라벨(name){
+  if (!name) return "—";
+  var m = String(name).match(/세대\s*(\d+)/);
+  if (!m) return name;                       /* 손코딩 앵커 등은 그대로 */
+  var g = parseInt(m[1], 10);
+  if (g === 0) return "학습 전";
+  var found = null;
+  S.gens.forEach(function(x){ if (x.gen === g) found = x; });
+  return found ? comma(found.ep) + "판 학습" : "세대 " + g;
+}
+
+function render(){
+  var st = S.st;
+  var running = (st.state === "돌리는 중" || st.state === "멈춤");
+  $("#setup").hidden = running;
+  $("#live").hidden = !running;
+  $("#btnStop").hidden = !running;
+  $("#btnCfg").hidden = !running;
+  $("#hd").classList.toggle("run", st.state === "돌리는 중");
+  $("#stat").textContent = running ? comma(st.ep) + "판 · 세대 " + st.gen : "";
+  if (!running) return;
+
+  var m = S.last;
+  if (m){
+    $("#huge").innerHTML = Math.round((m.wr0 || 0) * 100) + "<small>%</small>";
+    $("#sub2").textContent = "지금까지 " + comma(m.ep) + "판 돌렸습니다";
+    drawActs(m.acts0);
+    var tg = st.target || 0;
+    if (tg){
+      var pct = Math.min(100, m.ep / tg * 100);
+      $("#progBar").style.width = pct.toFixed(1) + "%";
+      $("#progTxt").textContent = comma(m.ep) + " / " + comma(tg) + "판  (" + pct.toFixed(0) + "%)";
+    } else {
+      $("#progBar").style.width = "0%";
+      $("#progTxt").textContent = "목표 없음 — 직접 멈출 때까지 계속 돕니다";
+    }
+  }
+  var w = st.watching || {};
+  var 마인판 = (st.preset || "").indexOf("dragoon") === 0;
+  if (w.left_name){
+    $("#vsL").textContent = "왼쪽 · " + 세대라벨(w.left_name)
+      + (w.alive0 != null ? " (남은 " + w.alive0 + ")" : "");
+    /* 마인 판에서는 오른쪽이 학습된 상대가 아니라 그냥 마인이다. 세대 번호를 보여주면 거짓말이 된다. */
+    $("#vsR").textContent = 마인판 ? "오른쪽 · 마인 3개 (벌처는 심어만 두고 가만히)"
+                                  : "오른쪽 · " + 세대라벨(w.right_name)
+                                    + (w.alive1 != null ? " (남은 " + w.alive1 + ")" : "");
+  }
+  drawChart();
+}
+
+function sse(){
+  var es = new EventSource("/api/stream");
+  es.onmessage = function(e){
+    var r; try { r = JSON.parse(e.data); } catch (x) { return; }
+    if (r.t === "upd"){
+      S.last = r;
+      S.curve.push({ep: r.ep, wr: r.wr0 || 0});
+      if (S.curve.length > 4000)
+        S.curve = S.curve.filter(function(_, i){ return i % 2 === 0; });
+    }
+  };
+  es.onerror = function(){ es.close(); setTimeout(sse, 2500); };
+}
+
+function pollStatus(){
+  fetch("/api/status").then(function(r){ return r.json(); }).then(function(st){
+    S.st = st;
+    $("#presetName").textContent = st.preset_name || "";
+    $("#sName").textContent = st.preset_name || "";
+    $("#sDesc").textContent = st.preset_desc || "";
+    if (!S.inited){ S.inited = true; buildKnobs(st.sliders); drawGoal(); }
+    render();
+  }).catch(function(){});
+}
+function drawHist(){
+  var rows = S.runs || [];
+  var card = $("#histCard"), body = $("#histBody");
+  if (!rows.length){ card.hidden = true; return; }
+  card.hidden = false; body.innerHTML = "";
+  rows.slice(0, 8).forEach(function(r){
+    var tr = document.createElement("tr");
+    var 이름 = r.running ? '<span class="now">● ' + r.run + " (돌는 중)</span>" : r.run;
+    tr.innerHTML = "<td>" + 이름 + "</td>"
+      + '<td class="num">' + comma(r.ep) + "</td>"
+      + '<td class="num">' + (r.wr_final != null ? Math.round(r.wr_final*100) + "%" : "—") + "</td>"
+      + '<td class="num">' + (r.retreat_final != null ? Math.round(r.retreat_final*100) + "%" : "—") + "</td>"
+      + '<td class="num">' + (r.elapsed_min != null ? r.elapsed_min + "분" : "—") + "</td>";
+    body.appendChild(tr);
+  });
+}
+function pollRuns(){
+  fetch("/api/runs").then(function(r){ return r.json(); }).then(function(v){
+    S.runs = v || []; drawHist();
+  }).catch(function(){});
+}
+
+function pollGens(){
+  fetch("/api/gens").then(function(r){ return r.json(); }).then(function(g){
+    /* 예전엔 배열이었다. 지금은 {list, best}. 둘 다 받아준다. */
+    S.gens = (g && g.list) ? g.list : (g || []);
+    S.best = (g && g.best && g.best.gen != null) ? g.best : null;
+    drawGens(); drawBest();
+  }).catch(function(){});
+  fetch("/api/best").then(function(r){ return r.json(); }).then(function(v){
+    S.bestState = v; drawBest();
+  }).catch(function(){});
+}
+
+/* ── 버튼 ───────────────────────────────────────────────── */
+$("#foldHead").onclick = function(){ $("#fold").classList.toggle("open"); };
+$("#btnCast").onclick = function(){ window.open("/broadcast"); };
+
+$("#btnGo").onclick = function(){
+  var b = $("#btnGo");
+  if (b.dataset.mode === "tune"){
+    b.disabled = true;
+    fetch("/api/tune", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({sliders: S.vals})}).then(function(){
+        b.disabled = false; b.dataset.mode = ""; b.innerHTML = "▶&nbsp; 돌리기";
+        $("#setup").hidden = true; $("#live").hidden = false;
+      });
+    return;
+  }
+  b.disabled = true; b.textContent = "시작하는 중…";
+  fetch("/api/start", {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({run:"실험", sliders: S.vals, target: S.target})}).then(function(){
+      setTimeout(function(){
+        b.disabled = false; b.innerHTML = "▶&nbsp; 돌리기"; pollStatus();
+      }, 1500);
+    });
+};
+
+$("#btnStop").onclick = function(){
+  if (!confirm("멈출까요? 지금까지 배운 건 세대로 저장돼 있습니다.")) return;
+  fetch("/api/stop", {method:"POST"}).then(function(){ setTimeout(pollStatus, 800); });
+};
+
+$("#btnCfg").onclick = function(){
+  $("#setup").hidden = false; $("#live").hidden = true;
+  $("#fold").classList.add("open");
+  var b = $("#btnGo");
+  b.dataset.mode = "tune";
+  b.textContent = "이 점수로 이어서 돌리기";
+};
+
+/* ── 카메라 ─────────────────────────────────────────────── */
+function cam(){
+  var img = $("#cam");
+  img.onload = function(){ $("#camNone").style.display = "none"; };
+  img.onerror = function(){ setTimeout(cam, 3000); };
+  img.src = "/live.mjpg?" + Date.now();
+}
+setInterval(cam, 12 * 60 * 1000);   /* 오래 띄우면 메모리가 새서 가끔 다시 붙인다 */
+
+if (location.pathname === "/broadcast" || location.pathname === "/watch"){
+  document.querySelector("header").style.display = "none";
+  document.querySelector("main").style.padding = "0";
+}
+
+cam(); sse(); pollStatus(); pollGens(); pollRuns();
+setInterval(pollStatus, 1200);
+setInterval(pollGens, 6000);
+setInterval(pollRuns, 8000);
+addEventListener("resize", drawChart);
+</script>
+</body>
+</html>
