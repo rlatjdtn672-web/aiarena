@@ -68,6 +68,12 @@ def studio_env():
         "OMP_NUM_THREADS": "1",
         "MKL_NUM_THREADS": "1",
         "PYTHONNOUSERSITE": "1",
+        # 학습기·인코더가 앱 안에 .pyc 를 쓰면 서명이 깨진다. 캐시는 앱 밖으로.
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONPYCACHEPREFIX": os.path.expanduser("~/Library/Caches/StarAIStudio/pycache"),
+        # torch 가 컴파일 캐시를 만들 때도 앱 밖으로
+        "TORCHINDUCTOR_CACHE_DIR": os.path.expanduser("~/Library/Caches/StarAIStudio/torch"),
+        "XDG_CACHE_HOME": os.path.expanduser("~/Library/Caches/StarAIStudio"),
     })
     return env
 

@@ -64,6 +64,9 @@ cat > "$APP/Contents/MacOS/StarAIStudio" << 'SH'
 #!/bin/bash
 R="$(cd "$(dirname "$0")/../Resources" && pwd)"
 export SC_HOME="$R" PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1
+# ★ 파이썬 캐시(.pyc)를 앱 밖에 쓰게 한다. 앱 안에 파일이 생기면 서명이 깨져
+#   다음 실행 때 "손상된 앱" 경고가 뜰 수 있다.
+export PYTHONPYCACHEPREFIX="$HOME/Library/Caches/StarAIStudio/pycache"
 mkdir -p "$HOME/Library/Application Support/StarAIStudio/logs"
 exec "$R/python/bin/python3" "$R/app/launcher.py" \
   >> "$HOME/Library/Application Support/StarAIStudio/logs/app.log" 2>&1
