@@ -66,12 +66,13 @@ def p_spread(o, alive):  # 벌려서 접근
     return a
 POL = {"정지": p_stop, "돌진": p_rush, "무빙샷": p_kite, "벌리기": p_spread}
 
-def duel(ally, n_ally, enemy, n_enemy, pol0, pol1, eps, seed, fs, r_step, extra=()):
+def duel(ally, n_ally, enemy, n_enemy, pol0, pol1, eps, seed, fs, r_step, extra=(), spot=None):
+    cx, cy = (spot or SPOT)
     cmd = [BIN, "--data", MPQ, "--map", MAP, "--selfplay", "--strict-fire", "--box-range",
            "--ally", ally, "--enemy", enemy, "--allies", str(n_ally), "--enemies", str(n_enemy),
            "--frame-skip", str(fs), "--max-steps", "200", "--episodes", str(eps),
            "--seed", str(seed), "--r-step", str(r_step),
-           "--cx", SPOT[0], "--cy", SPOT[1], *extra]
+           "--cx", str(cx), "--cy", str(cy), *extra]
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.DEVNULL, cwd=MPQ)
     def rd(k):

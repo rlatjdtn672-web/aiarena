@@ -180,6 +180,78 @@ def grade(path, side="vulture", progress=None):
     }
 
 
+# ── 숨긴 테스트케이스 채점 (서버용) ─────────────────────────────────
+# 케이스 파일(SC_GRADE_CASES)과 숨긴 상대 전략(SC_GRADE_POLICIES)은 공개 저장소에 없다.
+# 케이스 하나 = 판을 차리는 방식(저글링 대형·거리·투혼의 자리) + 상대 전략 + 숨긴 씨앗.
+# 게임 규칙(유닛 체력·속도·공격력)은 절대 안 바꾼다. 바꾸는 건 '어디서 어떻게 시작하나' 뿐이다.
+# 통과 = 그 케이스에서 사람 손코딩 4종 중 가장 잘한 것만큼 이상 이김.
+def _load_hidden(cases_path=None, policies_path=None):
+    import importlib.util
+    cases_path = cases_path or os.environ.get("SC_GRADE_CASES")
+    policies_path = policies_path or os.environ.get("SC_GRADE_POLICIES")
+    if not (cases_path and os.path.exists(cases_path)):
+        raise 형식오류("숨긴 케이스 파일이 없습니다 (SC_GRADE_CASES). 숨긴 채점은 서버에서만 합니다.")
+    cases = json.load(open(cases_path))
+    if cases.get("판버전") != board_hash():
+        raise 형식오류(f"케이스가 다른 판 버전({cases.get('판버전')})용입니다. 지금 판은 {board_hash()} — 케이스를 다시 재야 합니다.")
+    pols = dict(S.POL)
+    if policies_path:
+        spec = importlib.util.spec_from_file_location("hidden_policies", policies_path)
+        m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+        pols.update(m.HIDDEN)
+    return cases, pols
+
+
+def grade_hidden(path, side="vulture", reveal=False, progress=None, cases_path=None, policies_path=None):
+    t0 = time.time()
+    w, meta = load_weights(path)
+    pol = policy_of(w)
+    cases, pols = _load_hidden(cases_path, policies_path)
+    todo = cases["문제"][side]
+
+    def one(c):
+        extra = ["--zform", str(c["form"]), "--gap-lo", str(c["gap"][0]), "--gap-hi", str(c["gap"][1])]
+        win = lose = tie = 0
+        for sd in c["seeds"]:
+            if side == "vulture":
+                a, b, d, _ = S.duel(*UNITS, pol, pols[c["foe"]], PUBLIC_EPS, sd, FRAME_SKIP, 1, extra, spot=c["spot"])
+            else:
+                b, a, d, _ = S.duel(*UNITS, pols[c["foe"]], pol, PUBLIC_EPS, sd, FRAME_SKIP, 1, extra, spot=c["spot"])
+            win += a; lose += b; tie += d
+        return win, lose, tie
+
+    rows, done = [], 0
+    with ThreadPoolExecutor(max_workers=min(8, os.cpu_count() or 4)) as pool:
+        futs = [(c, pool.submit(one, c)) for c in todo]
+        for c, f in futs:
+            win, lose, tie = f.result()
+            r = {"케이스": c["id"], "통과": win >= c["사람"], "이김": win, "판": win + lose + tie}
+            if reveal:
+                r.update(이름=c["이름"], 사람=c["사람"], 손코딩=c["손코딩"])
+            rows.append(r); done += 1
+            if progress:
+                progress(done, len(todo))
+    k = sum(r["통과"] for r in rows)
+    verdict = "맞았습니다" if k == len(rows) else ("틀렸습니다" if k == 0 else "부분 점수")
+    pid, pname = PROBLEMS[side]
+    return {"문제": pid, "문제이름": pname, "편": side, "결과": verdict,
+            "점수": round(100 * k / len(rows)), "통과": k, "케이스수": len(rows), "표": rows,
+            "판버전": board_hash(), "씨앗": "숨김", "초": round(time.time() - t0, 1), "파일": meta}
+
+
+def 숨긴성적표_글(r):
+    mark = {"맞았습니다": "🟢", "부분 점수": "🟡", "틀렸습니다": "🔴"}[r["결과"]]
+    lines = [f"{r['문제']}번 {r['문제이름']} (숨긴 케이스) — {mark} {r['결과']} ({r['점수']}점)",
+             f"  케이스 {r['케이스수']}개 중 {r['통과']}개 통과"]
+    for x in r["표"]:
+        s = f"  {x['케이스']} {'✓' if x['통과'] else '✗'}  {x['이김']:>2}/{x['판']}"
+        if "이름" in x:
+            s += f"   사람 {x['사람']:>2}   {x['이름']}"
+        lines.append(s)
+    lines.append(f"  판 버전 {r['판버전']} · {r['초']}초")
+    return "\n".join(lines)
+
+
 def export_npz(path, out, side, extra=None):
     """제출용 파일: 신경망 숫자 + 설명(meta)만. pickle 이 없어서 받는 쪽이 안전하다."""
     w, meta = load_weights(path)
@@ -210,12 +282,17 @@ if __name__ == "__main__":
                     help="안 주면 파일 이름으로 짐작 (v→벌처, z→저글링)")
     ap.add_argument("--export", default=None, help="채점 대신 제출용 .npz 를 만든다")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--hidden", action="store_true", help="숨긴 케이스로 채점 (서버 전용: SC_GRADE_CASES 필요)")
+    ap.add_argument("--reveal", action="store_true", help="숨긴 케이스의 조건까지 보여준다 (운영자용)")
     a = ap.parse_args()
     side = a.side or ("zergling" if os.path.basename(a.file).startswith("z") else "vulture")
     S.check_files()
     try:
         if a.export:
             print("제출용 파일:", export_npz(a.file, a.export, side))
+        elif a.hidden:
+            r = grade_hidden(a.file, side, reveal=a.reveal)
+            print(json.dumps(r, ensure_ascii=False, indent=1) if a.json else 숨긴성적표_글(r))
         else:
             r = grade(a.file, side)
             print(json.dumps(r, ensure_ascii=False, indent=1) if a.json else 성적표_글(r))

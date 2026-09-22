@@ -149,6 +149,9 @@ int main(int argc, char** argv) {
     const int arg_cy     = arg_int(argc, argv, "--cy", -1);
     const int gap_lo     = arg_int(argc, argv, "--gap-lo", 220);
     const int gap_hi     = arg_int(argc, argv, "--gap-hi", 300);
+    // 저글링(적) 시작 대형. 게임 규칙은 안 바꾸고 '어디에 세우나'만 바꾼다 (채점 케이스용).
+    //   0 일렬(기본) · 1 위아래로 갈라짐 · 2 반원으로 감싸기 · 3 한 덩어리
+    const int zform      = arg_int(argc, argv, "--zform", 0);
     // 럴커 판: 적은 버로우해서 고정, 아군에 디텍터(과학선)와 스팀을 붙인다
     const bool enemy_burrow = arg_flag(argc, argv, "--enemy-burrow");
     const bool use_detector = arg_flag(argc, argv, "--detector");
@@ -454,6 +457,26 @@ int main(int argc, char** argv) {
     fprintf(stderr, "  보상: 적HP %.2f / 아군HP -%.2f / 처치 +%.1f / 사망 -%.1f / 승 +%.1f / 패 -%.1f / 시간초과 -%.1f / 스텝 -%.4f\n",
             R_ENEMY_HP, R_ALLY_HP, R_KILL, R_DEATH, R_WIN, R_LOSE, R_TIMEOUT, R_STEP);
 
+    // 대형 k 번째 저글링의 자리. (sx, sy) 는 스폰 실패 때 교전 전체를 옮기는 양.
+    auto zpos = [&](int i, int n, int gap, int spread, int sx, int sy) {
+        const int vx = CX - gap / 2, vy = CY;               // 벌처 자리
+        if (zform == 1) {                                   // 위아래 두 무리
+            int half = (n + 1) / 2, g = i < half ? 0 : 1, k = i < half ? i : i - half;
+            int m = g == 0 ? half : n - half;
+            int oy = (g == 0 ? -1 : 1) * (gap * 6 / 10);
+            return xy(CX + gap / 2 + sx, (int)(CY + oy + (k - (m - 1) / 2.0) * spread * 0.8) + sy);
+        }
+        if (zform == 2) {                                   // 벌처를 중심으로 한 반원 (오른쪽 -70°~+70°)
+            double a = (n == 1 ? 0.0 : (-70.0 + 140.0 * i / (n - 1))) * 3.14159265 / 180.0;
+            return xy((int)(vx + gap * std::cos(a)) + sx, (int)(vy + gap * std::sin(a)) + sy);
+        }
+        if (zform == 3) {                                   // 2열 × 3행 한 덩어리
+            int c = i % 2, r = i / 2, rows = (n + 1) / 2;
+            return xy(CX + gap / 2 + c * 26 + sx, (int)(CY + (r - (rows - 1) / 2.0) * 26) + sy);
+        }
+        return xy(CX + gap / 2 + sx, CY - (n - 1) * spread / 2 + i * spread + sy);
+    };
+
     for (; episode < n_episodes; ++episode) {
         // ── 에피소드 리셋 ──
         clear_all();
@@ -471,11 +494,8 @@ int main(int argc, char** argv) {
             M[i] = ui.trigger_create_unit(T_ALLY,
                                           xy(CX - gap / 2, y0 + i * spread), 0);
         }
-        for (int i = 0; i < n_zealot; ++i) {
-            int y0 = CY - (n_zealot - 1) * spread / 2;
-            Z[i] = ui.trigger_create_unit(T_ENEMY,
-                                          xy(CX + gap / 2, y0 + i * spread), 1);
-        }
+        for (int i = 0; i < n_zealot; ++i)
+            Z[i] = ui.trigger_create_unit(T_ENEMY, zpos(i, n_zealot, gap, spread, 0, 0), 1);
         // 스폰 실패는 지형 때문에 가끔 생긴다. 위치를 조금씩 옮겨 재시도한다.
         // ★ 거리(gap)는 절대 줄이지 않는다 — 줄이면 접근 시간이 짧아져 판이 통째로 쉬워진다.
         //   대신 세로 간격을 좁히고, 그래도 안 되면 두 줄로 세운다.
@@ -505,6 +525,10 @@ int main(int argc, char** argv) {
             int zcols = 1 + (retry % 8) / 4;
             int zper = (n_zealot + zcols - 1) / zcols;
             for (int i = 0; i < n_zealot; ++i) {
+                if (zform != 0) {       // 대형 판은 모양을 바꾸면 다른 케이스가 된다 → 통째로만 옮긴다
+                    Z[i] = ui.trigger_create_unit(T_ENEMY, zpos(i, n_zealot, gap, spread, shx, shy), 1);
+                    continue;
+                }
                 int c = i / zper, k = i % zper;
                 int y0 = CY - (zper - 1) * zsp / 2;
                 Z[i] = ui.trigger_create_unit(T_ENEMY,
