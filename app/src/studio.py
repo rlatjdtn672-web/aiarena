@@ -579,6 +579,56 @@ def _ckpt(side, which):
     return os.path.join(ck, f"{pre}{g:03d}.pt")
 
 
+# ── 채점 (백준의 채점과 같은 자리) ────────────────────────────────
+# 앱 안에선 grade.py 가 이 파일 옆에 복사돼 있고, 저장소에서 바로 돌릴 땐 train/ 에 있다.
+for _p in (HERE, os.path.join(HERE, "..", "..", "train")):
+    if os.path.exists(os.path.join(_p, "grade.py")):
+        sys.path.insert(0, os.path.abspath(_p)); break
+GRADE = {"state": "대기", "progress": 0, "total": 4, "result": None, "error": None, "job": None}
+_grade_lock = threading.Lock()
+
+
+def _grade_ckpt(run, side, gen):
+    """(실험 이름, 편, 세대) → 체크포인트 경로. 세대가 없으면 마지막 세대."""
+    run = os.path.basename(run or "")
+    ck = os.path.join(RUNS, run, "ckpt")
+    pre = "v" if side == "vulture" else "z"
+    gens = _세대목록(ck, pre) if os.path.isdir(ck) else []
+    if not gens:
+        raise ValueError("이 실험에는 저장된 세대가 없습니다")
+    g = gens[-1] if gen in (None, "", "last") else int(gen)
+    if g not in gens:
+        raise ValueError(f"세대 {g} 이(가) 없습니다")
+    return os.path.join(ck, f"{pre}{g:03d}.pt"), g
+
+
+def _grade_worker(run, side, gen):
+    try:
+        import grade as G
+        path, g = _grade_ckpt(run, side, gen)
+        def prog(i, n):
+            GRADE.update(progress=i, total=n)
+        r = G.grade(path, side, progress=prog)
+        r["실험"], r["세대"] = run, g
+        GRADE.update(state="끝", result=r)
+    except Exception as e:
+        traceback.print_exc()
+        GRADE.update(state="오류", error=str(e))
+
+
+def _export_submission(run, side, gen):
+    import grade as G
+    path, g = _grade_ckpt(run, side, gen)
+    pid = G.PROBLEMS[side][0]
+    out = os.path.join(os.path.expanduser("~/Downloads"), f"aiarena_{pid}_{os.path.basename(run)}_세대{g}.npz")
+    G.export_npz(path, out, side, {"실험": os.path.basename(run), "세대": g})
+    try:
+        subprocess.Popen(["open", "-R", out])       # Finder 에서 파일을 보여준다
+    except Exception:
+        pass
+    return out
+
+
 def _refresh_spectator():
     """세대가 바뀌었을 때 관전 선수를 최신으로 갈아끼운다."""
     if SPEC is None:
@@ -810,6 +860,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if path == "/api/preflight":
                 with _pf_lock:
                     return self._json(dict(PREFLIGHT))
+            if path == "/api/grade":
+                return self._json({k: v for k, v in GRADE.items() if k != "job"})
+            if path == "/api/ckpts":
+                return self._json(self.ckpts())
             self._send(404, "text/plain; charset=utf-8", "없는 주소입니다")
         except (BrokenPipeError, ConnectionResetError):
             pass
@@ -865,6 +919,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
                                 gen=None, ep=None, wr=None, surv=None)
                 threading.Thread(target=_best_worker, daemon=True).start()
                 return self._json(dict(BEST))
+            if path == "/api/grade":
+                side = b.get("side", "vulture")
+                if side not in ("vulture", "zergling"):
+                    raise ValueError("편은 vulture 또는 zergling 입니다")
+                with _grade_lock:
+                    if GRADE["state"] == "채점 중":
+                        return self._json({k: v for k, v in GRADE.items() if k != "job"})
+                    _grade_ckpt(b.get("run"), side, b.get("gen"))      # 없는 파일이면 여기서 바로 알린다
+                    GRADE.update(state="채점 중", progress=0, total=4, result=None, error=None,
+                                 job={"run": b.get("run"), "side": side, "gen": b.get("gen")})
+                    threading.Thread(target=_grade_worker, args=(b.get("run"), side, b.get("gen")),
+                                     daemon=True).start()
+                return self._json({k: v for k, v in GRADE.items() if k != "job"})
+            if path == "/api/export":
+                out = _export_submission(b.get("run"), b.get("side", "vulture"), b.get("gen"))
+                return self._json({"ok": True, "path": out})
             if path == "/api/clip":
                 return self._json(save_clip())
             if path == "/api/render_clips":
@@ -909,6 +979,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
         b = 최고세대() or {}
         return {"list": [{"gen": g, "ep": e} for g, e in TAILER.gens if g in have],
                 "best": {k: b.get(k) for k in ("gen", "ep", "wr", "surv")} if b else None}
+
+    def ckpts(self):
+        """채점 창에서 고를 것: 실험마다 벌처(v)·저글링(z) 세대 목록."""
+        out = []
+        if os.path.isdir(RUNS):
+            for name in sorted(os.listdir(RUNS), reverse=True):
+                ck = os.path.join(RUNS, name, "ckpt")
+                if not os.path.isdir(ck):
+                    continue
+                v, z = _세대목록(ck, "v"), _세대목록(ck, "z")
+                if v or z:
+                    out.append({"run": name, "vulture": v, "zergling": z})
+        return out
 
     def runs(self):
         out = []

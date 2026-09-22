@@ -57,6 +57,7 @@ cp "$ROOT/engine/bwmicro_sp" "$RES/engine/"
 step "3. 스튜디오 코드·맵"
 mkdir -p "$RES/app" "$RES/maps"
 cp "$APPDIR"/src/*.py "$APPDIR"/src/*.html "$RES/app/"
+cp "$ROOT/train/grade.py" "$ROOT/train/scripted_check.py" "$RES/app/"   # 채점기 (서버 채점과 같은 코드)
 cp "$ROOT/maps/Fighting_Spirit_1.3.scx" "$RES/maps/"
 
 step "4. 앱 껍데기"
@@ -81,8 +82,8 @@ cat > "$APP/Contents/Info.plist" << 'PL'
   <key>CFBundleName</key><string>StarAIStudio</string>
   <key>CFBundleDisplayName</key><string>스타 AI 스튜디오</string>
   <key>CFBundleIdentifier</key><string>kr.aiarena.studio</string>
-  <key>CFBundleVersion</key><string>0.1.1</string>
-  <key>CFBundleShortVersionString</key><string>0.1.1</string>
+  <key>CFBundleVersion</key><string>0.2.0</string>
+  <key>CFBundleShortVersionString</key><string>0.2.0</string>
   <key>CFBundleExecutable</key><string>StarAIStudio</string>
   <key>CFBundleIconFile</key><string>icon</string>
   <key>CFBundlePackageType</key><string>APPL</string>

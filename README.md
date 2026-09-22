@@ -89,6 +89,21 @@ python train/train.py --ally marine --allies 12 --enemy lurker --enemies 2 --out
 
 ---
 
+## 채점 (백준처럼)
+
+학습한 AI 파일을 사람이 손으로 짠 전략 4가지(정지·돌진·무빙샷·벌리기)와 붙여 성적표를 냅니다.
+
+```bash
+python train/grade.py runs/sp1/ckpt/v012.pt                   # 1001번 벌처 무빙샷
+python train/grade.py runs/sp1/ckpt/z012.pt --side zergling   # 1002번 저글링 포위
+python train/grade.py runs/sp1/ckpt/v012.pt --export 제출.npz  # 제출용 파일
+```
+
+- **맞았습니다** = 사람의 정답(손코딩 중 가장 잘하는 것)보다 많이 이김 · **부분 점수** · **틀렸습니다**
+- 행동은 가장 높은 확률 하나만 고릅니다 → 같은 파일이면 항상 같은 점수. 채점 한 번에 몇 초.
+- 여기 씨앗은 공개(예제 채점)입니다. 서버 채점은 공개하지 않은 판으로 따로 잽니다.
+- 제출 파일(`.npz`)에는 신경망 숫자만 들어 있어 주고받아도 안전합니다. 설계: [docs/채점서비스_설계.md](docs/채점서비스_설계.md)
+
 ## 구조
 
 ```

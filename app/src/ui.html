@@ -105,6 +105,33 @@ canvas{width:100%;display:block;border-radius:8px}
 .hist tr:last-child td{border-bottom:0}
 .hist .now{color:var(--good);font-weight:700}
 .empty{color:var(--dim);font-size:14px;padding:6px 0}
+
+/* ── 채점 창 ── */
+[hidden]{display:none!important}
+.modal{position:fixed;inset:0;background:rgba(5,7,10,.72);display:flex;align-items:flex-start;
+       justify-content:center;padding:6vh 16px;z-index:50;overflow:auto}
+.modal .box{width:min(720px,100%);background:var(--card);border:1px solid var(--line);
+            border-radius:16px;padding:22px 24px}
+.modal h3{margin:0 0 4px;font-size:19px}
+.modal .lead{color:var(--dim);font-size:13.5px;margin:0 0 16px}
+.gr-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.gr-row label{font-size:13px;color:var(--dim);width:64px}
+.gr-row select{font:inherit;color:var(--txt);background:#1c2029;border:1px solid var(--line);
+               border-radius:8px;padding:7px 10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{padding:7px 14px;font-size:14px}
+.seg button.on{background:var(--p0);color:#04222e;font-weight:700}
+.verdict{font-size:22px;font-weight:800;margin:18px 0 4px}
+.verdict.ok{color:var(--good)} .verdict.part{color:#f2c14e} .verdict.no{color:var(--bad)}
+table.gr{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
+table.gr th{color:var(--dim);font-weight:600;text-align:right;padding:6px 8px;border-bottom:1px solid var(--line)}
+table.gr th:first-child,table.gr td:first-child{text-align:left}
+table.gr td{padding:6px 8px;text-align:right;border-bottom:1px solid #1e222b}
+.gr-foot{color:var(--dim);font-size:12.5px;margin-top:10px;line-height:1.6}
+.gr-act{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.btn.go{background:var(--good);color:#06210f;border-color:transparent}
+.btn:disabled{opacity:.5;cursor:default}
+td .mini{font-size:12.5px;padding:3px 9px;border:1px solid var(--line);border-radius:7px}
 </style>
 </head>
 <body>
@@ -117,6 +144,7 @@ canvas{width:100%;display:block;border-radius:8px}
   <span class="sub" id="stat"></span>
   <button class="btn" id="btnCfg" hidden>점수 설정</button>
   <button class="btn stop" id="btnStop" hidden>멈추기</button>
+  <button class="btn" id="btnGrade">채점</button>
   <button class="btn" id="btnCast">녹화 화면</button>
 </header>
 
@@ -143,7 +171,7 @@ canvas{width:100%;display:block;border-radius:8px}
       <div class="card" style="margin-top:34px;text-align:left" id="histCard" hidden>
         <h2>지난 실험</h2>
         <table class="hist"><thead><tr>
-          <th>이름</th><th>판</th><th>승률</th><th>물러나기</th><th>시간</th>
+          <th>이름</th><th>판</th><th>승률</th><th>물러나기</th><th>시간</th><th></th>
         </tr></thead><tbody id="histBody"></tbody></table>
       </div>
     </div>
@@ -191,6 +219,29 @@ canvas{width:100%;display:block;border-radius:8px}
     </div>
   </section>
 </main>
+
+<div class="modal" id="grModal" hidden>
+  <div class="box">
+    <h3>채점</h3>
+    <p class="lead">학습한 AI를 사람이 손으로 짠 전략 4가지와 붙입니다.
+      사람의 정답(무빙샷 등)보다 많이 이기면 <b>맞았습니다</b>. 같은 파일이면 점수는 항상 같습니다.</p>
+    <div class="gr-row"><label>실험</label><select id="grRun"></select></div>
+    <div class="gr-row"><label>문제</label>
+      <span class="seg" id="grSide">
+        <button data-s="vulture" class="on">1001 벌처 무빙샷</button>
+        <button data-s="zergling">1002 저글링 포위</button>
+      </span></div>
+    <div class="gr-row"><label>세대</label><select id="grGen"></select></div>
+    <div class="gr-act">
+      <button class="btn go" id="grGo">채점하기</button>
+      <button class="btn" id="grExport" hidden>제출용 파일 만들기</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="grClose">닫기</button>
+    </div>
+    <div id="grOut"></div>
+  </div>
+</div>
+
 
 <script>
 /* 화면에 보이는 손잡이는 이게 전부입니다. 나머지는 안전한 기본값으로 잠급니다. */
@@ -476,10 +527,102 @@ function drawHist(){
       + '<td class="num">' + comma(r.ep) + "</td>"
       + '<td class="num">' + (r.wr_final != null ? Math.round(r.wr_final*100) + "%" : "—") + "</td>"
       + '<td class="num">' + (r.retreat_final != null ? Math.round(r.retreat_final*100) + "%" : "—") + "</td>"
-      + '<td class="num">' + (r.elapsed_min != null ? r.elapsed_min + "분" : "—") + "</td>";
+      + '<td class="num">' + (r.elapsed_min != null ? r.elapsed_min + "분" : "—") + "</td>"
+      + '<td><button class="mini">채점</button></td>';
+    tr.querySelector(".mini").onclick = function(){ grOpen(r.run); };
     body.appendChild(tr);
   });
 }
+/* ── 채점 ─────────────────────────────────────────────── */
+var GR = {side: "vulture", list: [], timer: null};
+function grOpen(run){
+  $("#grModal").hidden = false; $("#grOut").innerHTML = ""; $("#grExport").hidden = true;
+  fetch("/api/ckpts").then(function(r){ return r.json(); }).then(function(v){
+    GR.list = v || [];
+    var sel = $("#grRun"); sel.innerHTML = "";
+    if (!GR.list.length){
+      $("#grOut").innerHTML = '<p class="gr-foot">아직 저장된 AI가 없습니다. 먼저 학습을 돌려 주세요.</p>';
+      $("#grGo").disabled = true; return;
+    }
+    $("#grGo").disabled = false;
+    GR.list.forEach(function(x){
+      var o = document.createElement("option"); o.value = x.run; o.textContent = x.run; sel.appendChild(o);
+    });
+    if (run) sel.value = run;
+    grFillGens();
+  });
+  fetch("/api/grade").then(function(r){ return r.json(); }).then(grShow);
+}
+function grFillGens(){
+  var run = $("#grRun").value, x = null;
+  GR.list.forEach(function(y){ if (y.run === run) x = y; });
+  var gens = (x && x[GR.side]) || [], sel = $("#grGen"); sel.innerHTML = "";
+  gens.slice().reverse().forEach(function(g, i){
+    var o = document.createElement("option"); o.value = g;
+    o.textContent = (i === 0 ? "마지막 · " : "") + "세대 " + g + (g === 0 ? " (학습 전)" : "");
+    sel.appendChild(o);
+  });
+  $("#grGo").disabled = !gens.length;
+  $("#grExport").hidden = true;
+}
+function grPost(url){
+  return fetch(url, {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({run: $("#grRun").value, side: GR.side, gen: $("#grGen").value})})
+    .then(function(r){ return r.json(); });
+}
+function grShow(v){
+  var out = $("#grOut");
+  if (!v) return;
+  if (v.state === "채점 중"){
+    $("#grGo").disabled = true;
+    out.innerHTML = '<p class="gr-foot">채점 중… ' + (v.progress || 0) + " / " + (v.total || 4)
+      + " (처음 한 번은 사람 기준을 재느라 몇 초 더 걸립니다)</p>";
+    clearTimeout(GR.timer);
+    GR.timer = setTimeout(function(){ fetch("/api/grade").then(function(r){ return r.json(); }).then(grShow); }, 400);
+    return;
+  }
+  $("#grGo").disabled = false;
+  if (v.state === "오류"){ out.innerHTML = '<p class="verdict no">채점하지 못했습니다</p><p class="gr-foot">' + v.error + "</p>"; return; }
+  var r = v.result; if (!r) return;
+  var cls = {"맞았습니다":"ok", "부분 점수":"part", "틀렸습니다":"no"}[r["결과"]];
+  var h = '<div class="verdict ' + cls + '">' + r["결과"] + " · " + r["점수"] + "점</div>"
+    + '<div class="gr-foot" style="margin-top:0">' + r["문제"] + "번 " + r["문제이름"] + " · " + r["실험"]
+    + " 세대 " + r["세대"] + " — " + r["판"] + "판 중 <b>" + r["이김"] + "번</b> 이김 · 사람 기준("
+    + r["사람"] + ") " + r["사람_이김"] + "번</div>"
+    + '<table class="gr"><thead><tr><th>상대 (손코딩)</th><th>이김</th><th>짐</th><th>비김</th><th>사람(' + r["사람"] + ')이 이긴 수</th></tr></thead><tbody>';
+  r["표"].forEach(function(x){
+    h += "<tr><td>" + x["상대"] + '</td><td class="num">' + x["이김"] + '</td><td class="num">' + x["짐"]
+      + '</td><td class="num">' + x["비김"] + '</td><td class="num">' + x["사람"] + "</td></tr>";
+  });
+  h += "</tbody></table><p class=\"gr-foot\">상대마다 " + r["표"][0]["판"] + "판 · 판 버전 " + r["판버전"]
+    + " · 공개 씨앗 · " + r["초"] + "초<br>이 점수는 앱 안의 <b>예제 채점</b>입니다. 서버 채점은 공개하지 않은 판으로 따로 잽니다.</p>";
+  out.innerHTML = h;
+  $("#grExport").hidden = false;
+}
+(function(){
+  $("#btnGrade").onclick = function(){ grOpen(); };
+  $("#grClose").onclick = function(){ $("#grModal").hidden = true; };
+  $("#grModal").onclick = function(e){ if (e.target === this) this.hidden = true; };
+  $("#grRun").onchange = grFillGens;
+  $("#grGen").onchange = function(){ $("#grExport").hidden = true; };
+  Array.prototype.forEach.call(document.querySelectorAll("#grSide button"), function(b){
+    b.onclick = function(){
+      GR.side = b.dataset.s;
+      Array.prototype.forEach.call(document.querySelectorAll("#grSide button"), function(x){ x.classList.toggle("on", x === b); });
+      grFillGens();
+    };
+  });
+  $("#grGo").onclick = function(){ $("#grExport").hidden = true; grPost("/api/grade").then(grShow); };
+  $("#grExport").onclick = function(){
+    grPost("/api/export").then(function(v){
+      var p = document.createElement("p"); p.className = "gr-foot";
+      p.innerHTML = v.ok ? "제출용 파일을 만들었습니다 (Finder 에 표시): <b>" + v.path + "</b><br>신경망 숫자만 들어 있어 안전하게 주고받을 수 있습니다."
+                         : "만들지 못했습니다: " + (v.error || "");
+      $("#grOut").appendChild(p);
+    });
+  };
+})();
+
 function pollRuns(){
   fetch("/api/runs").then(function(r){ return r.json(); }).then(function(v){
     S.runs = v || []; drawHist();
