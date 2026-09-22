@@ -56,7 +56,7 @@ def studio_env():
         "SC_PY": sys.executable,
         "SC_BIN": os.path.join(RES, "engine", "bwmicro_sp"),
         "SC_MPQ": MPQ_DIR,
-        "SC_MAP": os.path.join(RES, "maps", "Weave_v1.scx"),
+        "SC_MAP": os.path.join(RES, "maps", "Fighting_Spirit_1.3.scx"),
         "SC_RUNS": RUNS,
         "SC_OLD_RUNS": os.path.join(DATA, "old_runs"),
         "SC_ENCODER": os.path.join(HERE, "rgba2mjpeg.py"),

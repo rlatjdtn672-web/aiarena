@@ -100,7 +100,7 @@ train/
   train.py          셀프플레이 PPO
   scripted_check.py 설치 확인 + 손코딩 대전표
 maps/
-  Weave_v1.scx      전투용 빈 맵
+  Fighting_Spirit_1.3.scx  투혼 1.3 (판은 7시 방향 열린 땅에서 선다)
 data/mpq/           ← 게임 파일을 넣는 곳 (비어 있음)
 external/openbw     OpenBW (서브모듈)
 ```

@@ -81,9 +81,11 @@ ACT_NAME += [f"행동{i}" for i in range(len(ACT_NAME), N_ACT)]
 # 경로는 전부 이 저장소 기준이다. 환경변수로 바꿔 끼울 수 있다.
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MPQ  = os.environ.get("SC_MPQ",  os.path.join(ROOT, "data", "mpq"))
-MAP  = os.environ.get("SC_MAP",  os.path.join(ROOT, "maps", "Weave_v1.scx"))
+MAP  = os.environ.get("SC_MAP",  os.path.join(ROOT, "maps", "Fighting_Spirit_1.3.scx"))
 BIN  = os.environ.get("SC_BIN",  os.path.join(ROOT, "engine", "bwmicro_sp"))
-EXTRA = os.environ.get("SC_EXTRA", "").split()
+# 판이 서는 자리: 투혼 7시 방향 열린 흙바닥. 맵 한가운데는 구조물에 막혀 있어 쓰지 않는다.
+SPOT = os.environ.get("SC_SPOT", "1280,2560").split(",")
+EXTRA = ["--cx", SPOT[0], "--cy", SPOT[1]] + os.environ.get("SC_EXTRA", "").split()
 RUNS = os.environ.get("SC_RUNS", os.path.join(ROOT, "runs"))
 
 # 게임 파일이 없으면 여기서 친절하게 멈춘다 (안 그러면 C++ 이 알 수 없는 예외로 죽는다)

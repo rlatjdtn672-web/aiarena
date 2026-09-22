@@ -6,14 +6,15 @@
 
     python train/scripted_check.py
 
-벌처 무빙샷 vs 저글링 돌진이 12:11 쯤으로 팽팽하게 나오면 정상입니다.
+벌처 무빙샷 vs 저글링 돌진이 32:27 쯤(벌처가 조금 우세)으로 나오면 정상입니다.
 """
 import math, os, struct, subprocess, sys, time
 import numpy as np
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MPQ = os.environ.get("SC_MPQ", os.path.join(ROOT, "data", "mpq"))
-MAP = os.environ.get("SC_MAP", os.path.join(ROOT, "maps", "Weave_v1.scx"))
+MAP = os.environ.get("SC_MAP", os.path.join(ROOT, "maps", "Fighting_Spirit_1.3.scx"))
+SPOT = os.environ.get("SC_SPOT", "1280,2560").split(",")   # 투혼 7시 방향 열린 흙바닥
 BIN = os.environ.get("SC_BIN", os.path.join(ROOT, "engine", "bwmicro_sp"))
 OBS = 39
 DIRS = [(0,-1),(1,-1),(1,0),(1,1),(0,1),(-1,1),(-1,0),(-1,-1)]
@@ -69,7 +70,8 @@ def duel(ally, n_ally, enemy, n_enemy, pol0, pol1, eps, seed, fs, r_step, extra=
     cmd = [BIN, "--data", MPQ, "--map", MAP, "--selfplay", "--strict-fire", "--box-range",
            "--ally", ally, "--enemy", enemy, "--allies", str(n_ally), "--enemies", str(n_enemy),
            "--frame-skip", str(fs), "--max-steps", "200", "--episodes", str(eps),
-           "--seed", str(seed), "--r-step", str(r_step), *extra]
+           "--seed", str(seed), "--r-step", str(r_step),
+           "--cx", SPOT[0], "--cy", SPOT[1], *extra]
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.DEVNULL, cwd=MPQ)
     def rd(k):
