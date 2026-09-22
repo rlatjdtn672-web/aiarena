@@ -115,7 +115,12 @@ static bool arg_flag(int c, char** v, const char* n) {
 }
 
 static double hp_of(unit_t* u) {
-    return (double)u->hp.raw_value / 256.0 + (double)u->shield_points.raw_value / 256.0;
+    // ★ 보호막은 보호막이 있는 유닛(프로토스)만 더한다. 벌처·저글링도 shield_points 에
+    //   쓰레기값 100 이 들어 있어서, 전엔 벌처 80→180, 저글링 35→135 로 읽혔다.
+    //   관측의 체력 칸이 0~1 을 넘고, 처치·사망 보상이 2.3~3.9배로 부풀어 있었다 (9/22 수정).
+    double h = (double)u->hp.raw_value / 256.0;
+    if (u->unit_type->has_shield) h += (double)u->shield_points.raw_value / 256.0;
+    return h;
 }
 
 static bool write_all(const void* p, size_t n) {
