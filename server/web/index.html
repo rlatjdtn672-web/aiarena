@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aiarena 채점</title>
+<style>
+:root{--ink:#1d2129;--dim:#6b7280;--line:#e3e6eb;--bg:#f7f8fa;--card:#fff;--blue:#1f6feb;
+      --ok:#0a8f4e;--part:#b7791f;--no:#d1352b;--wait:#6b7280}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+     font:15px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+header{background:#fff;border-bottom:1px solid var(--line)}
+header .in{max-width:1080px;margin:0 auto;padding:0 16px;display:flex;align-items:center;gap:22px;height:56px;flex-wrap:wrap}
+header .logo{font-weight:800;font-size:18px;color:var(--ink)}
+header nav{display:flex;gap:18px;flex:1;flex-wrap:wrap}
+header nav a{color:var(--ink);font-weight:600} header nav a.on{color:var(--blue)}
+main{max-width:1080px;margin:0 auto;padding:22px 16px 60px}
+h1{font-size:22px;margin:0 0 6px} h2{font-size:17px;margin:26px 0 10px}
+.dim{color:var(--dim)} .small{font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.tbl{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tbl th{background:#f1f3f6;font-weight:600;font-size:13px;color:var(--dim);text-align:left;padding:9px 12px;white-space:nowrap}
+.tbl td{border-top:1px solid var(--line);padding:9px 12px;font-size:14px;white-space:nowrap}
+.scroll{overflow-x:auto}
+.num{font-variant-numeric:tabular-nums;text-align:right}
+.v-ok{color:var(--ok);font-weight:700} .v-part{color:var(--part);font-weight:700}
+.v-no,.v-err{color:var(--no);font-weight:700} .v-wait{color:var(--wait)}
+.btn{display:inline-block;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;
+     font:inherit;font-weight:600;cursor:pointer;color:var(--ink)}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+input[type=text]{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.prob h3{margin:0 0 4px;font-size:17px} .prob .meta{font-size:13px;color:var(--dim);margin-top:10px}
+.cases{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.cases span{font-size:12.5px;padding:3px 8px;border-radius:6px;border:1px solid var(--line)}
+.cases .y{background:#e8f6ee;border-color:#b7e2c8;color:var(--ok)} .cases .n{background:#fdecea;border-color:#f5c2bd;color:var(--no)}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:22px;text-align:center;margin:10px 0;background:#fafbfc}
+.drop.on{border-color:var(--blue);background:#eef4ff}
+.msg{margin-top:10px;font-size:14px} .msg.err{color:var(--no)}
+.foot{color:var(--dim);font-size:12.5px;margin-top:40px;line-height:1.7}
+.me{display:flex;align-items:center;gap:10px;font-size:14px}
+.me img{width:26px;height:26px;border-radius:50%}
+</style>
+</head>
+<body>
+<header><div class="in">
+  <a class="logo" href="/" data-go>aiarena</a>
+  <nav>
+    <a href="/" data-go data-k="home">문제</a>
+    <a href="/status" data-go data-k="status">채점 현황</a>
+    <a href="/ranking" data-go data-k="ranking">순위</a>
+  </nav>
+  <span class="me" id="meBox"></span>
+</div></header>
+<main id="main"></main>
+<main style="padding-top:0"><p class="foot">
+  aiarena 는 블리자드 엔터테인먼트와 관계없는 비공식 연구용 채점 사이트입니다. 학습은 각자 컴퓨터에서 하고, 여기서는 채점만 합니다.<br>
+  채점은 OpenBW 엔진과 블리자드 공식 AI·머신러닝 패키지로 서버 안에서 돌립니다. 게임 파일은 내려주지 않습니다.
+  StarCraft 는 Blizzard Entertainment 의 상표입니다.</p></main>
+
+<script>
+var $ = function(s){ return document.querySelector(s); };
+var ME = null, CFG = {}, timer = null;
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function api(u, opt){ return fetch(u, opt).then(function(r){ return r.json().then(function(j){ j._code = r.status; return j; }); }); }
+function when(t){
+  var d = new Date(t * 1000), s = (Date.now() / 1000 - t);
+  if (s < 60) return "방금"; if (s < 3600) return Math.floor(s / 60) + "분 전";
+  if (s < 86400) return Math.floor(s / 3600) + "시간 전";
+  return (d.getMonth() + 1) + "/" + d.getDate() + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+function vclass(v){ return {"맞았습니다":"v-ok","부분 점수":"v-part","틀렸습니다":"v-no","형식 오류":"v-err","채점 오류":"v-err"}[v] || "v-wait"; }
+function verdictCell(r){
+  if (r.status !== "끝") return '<span class="v-wait">' + esc(r.status) + "…</span>";
+  var t = esc(r.verdict);
+  if (r.verdict === "부분 점수" || r.verdict === "맞았습니다" || r.verdict === "틀렸습니다")
+    t += ' <span class="dim small">(' + r.passed + "/" + r.total + ")</span>";
+  return '<span class="' + vclass(r.verdict) + '">' + t + "</span>";
+}
+function userLink(login, name){ return '<a href="/status?user=' + encodeURIComponent(login) + '" data-go>' + esc(name || login) + "</a>"; }
+
+/* ── 화면 ── */
+function go(url, push){
+  if (push !== false) history.pushState(null, "", url);
+  clearTimeout(timer);
+  var u = new URL(url, location.origin), p = u.pathname;
+  document.querySelectorAll("header nav a").forEach(function(a){
+    var k = a.dataset.k;
+    a.classList.toggle("on", (k === "home" && (p === "/" || p.indexOf("/p/") === 0)) || (k && p === "/" + k));
+  });
+  if (p.indexOf("/p/") === 0) return pageProblem(p.slice(3));
+  if (p === "/status") return pageStatus(u.searchParams);
+  if (p === "/ranking") return pageRanking(u.searchParams.get("problem") || "1001");
+  if (p === "/me") return pageMe();
+  return pageHome();
+}
+document.addEventListener("click", function(e){
+  var a = e.target.closest("a[data-go]");
+  if (a && !e.metaKey && !e.ctrlKey){ e.preventDefault(); go(a.getAttribute("href")); }
+});
+window.addEventListener("popstate", function(){ go(location.pathname + location.search, false); });
+
+function pageHome(){
+  $("#main").innerHTML = "<h1>문제</h1><p class='dim'>앱에서 AI를 학습시키고, [제출용 파일 만들기]로 만든 .npz 파일을 제출하세요. "
+    + "채점은 공개하지 않은 테스트케이스로 합니다. 테스트케이스마다 사람이 손으로 짠 전략의 최고 성적 이상을 이기면 통과입니다.</p><div class='grid' id='plist'></div>";
+  api("/api/problems").then(function(v){
+    $("#plist").innerHTML = v.map(function(p){
+      return '<div class="card prob"><h3><a href="/p/' + p.id + '" data-go>' + p.id + ". " + esc(p["이름"]) + "</a></h3>"
+        + '<div>' + esc(p["설명"]) + "</div>"
+        + '<div class="meta">제출 ' + p["제출수"] + " · 참가 " + p["사람수"] + "명 · 맞았습니다 " + p["맞은수"] + "번"
+        + ' · <a href="/ranking?problem=' + p.id + '" data-go>순위</a></div></div>';
+    }).join("");
+  });
+}
+
+function pageProblem(pid){
+  api("/api/problems").then(function(v){
+    var p = v.filter(function(x){ return x.id === pid; })[0];
+    if (!p){ $("#main").innerHTML = "<h1>없는 문제입니다</h1>"; return; }
+    var h = "<h1>" + p.id + ". " + esc(p["이름"]) + "</h1>"
+      + '<div class="card"><div>' + esc(p["설명"]) + "</div>"
+      + '<p class="dim small" style="margin:10px 0 0">판: 투혼 · 벌처 1 vs 저글링 6 · 판단 주기 4프레임. 게임 규칙(체력·속도·공격력)은 스타크래프트 그대로입니다.<br>'
+      + "채점: 공개하지 않은 테스트케이스 16개. 저글링 대형·시작 거리·투혼의 자리·상대 전략이 케이스마다 다릅니다.<br>"
+      + "통과: 그 케이스에서 사람이 손으로 짠 전략의 최고 성적 이상 이기기. 16개 모두 통과하면 <b class='v-ok'>맞았습니다</b>.</p></div>"
+      + "<h2>제출</h2>";
+    if (!ME){
+      h += '<div class="card">제출하려면 <a href="/me" data-go>로그인</a>하세요.</div>';
+    } else {
+      h += '<div class="card"><div class="dim small">제출할 것: ' + esc(p["제출"]) + " · 앱의 채점 창 → [제출용 파일 만들기] → 다운로드 폴더의 .npz"
+        + " · 오늘 남은 제출 <b>" + p["오늘남은"] + "</b>번</div>"
+        + '<div class="drop" id="drop">.npz 파일을 여기로 끌어다 놓거나 <label class="btn" style="margin-left:6px">파일 고르기'
+        + '<input type="file" id="file" accept=".npz" hidden></label><div class="dim small" id="fname" style="margin-top:8px"></div></div>'
+        + '<button class="btn pri" id="send" disabled>제출</button><div class="msg" id="msg"></div></div>';
+    }
+    h += '<h2>이 문제의 최근 제출</h2><div class="scroll" id="recent"></div>';
+    $("#main").innerHTML = h;
+    loadStatusInto("#recent", "problem=" + pid, 8);
+    if (!ME) return;
+    var file = null;
+    function pick(f){ file = f; $("#fname").textContent = f ? f.name + " · " + f.size.toLocaleString() + "바이트" : ""; $("#send").disabled = !f; }
+    $("#file").onchange = function(){ pick(this.files[0]); };
+    var d = $("#drop");
+    d.ondragover = function(e){ e.preventDefault(); d.classList.add("on"); };
+    d.ondragleave = function(){ d.classList.remove("on"); };
+    d.ondrop = function(e){ e.preventDefault(); d.classList.remove("on"); pick(e.dataTransfer.files[0]); };
+    $("#send").onclick = function(){
+      $("#send").disabled = true; $("#msg").className = "msg"; $("#msg").textContent = "올리는 중…";
+      api("/api/submit?problem=" + pid, {method:"POST", headers:{"Content-Type":"application/octet-stream"}, body:file})
+        .then(function(r){
+          if (r.error){ $("#msg").className = "msg err"; $("#msg").textContent = r.error; $("#send").disabled = false; return; }
+          go("/status?user=" + encodeURIComponent(ME.login) + (r.dup ? "&dup=" + r.id : ""));
+        });
+    };
+  });
+}
+
+function statusTable(rows){
+  if (!rows.length) return '<div class="card dim">아직 제출이 없습니다.</div>';
+  return '<table class="tbl"><thead><tr><th>제출 번호</th><th>아이디</th><th>문제</th><th>결과</th><th class="num">점수</th><th class="num">채점 시간</th><th>제출한 때</th></tr></thead><tbody>'
+    + rows.map(function(r){
+      return "<tr><td><a href='/status?sub=" + r.id + "' data-go>" + r.id + "</a></td><td>" + userLink(r.user, r.name) + "</td>"
+        + "<td><a href='/p/" + r.problem + "' data-go>" + r.problem + "</a></td><td>" + verdictCell(r) + "</td>"
+        + '<td class="num">' + (r.score == null ? "" : r.score) + '</td><td class="num">' + (r.seconds ? r.seconds + "초" : "")
+        + "</td><td class='dim'>" + when(r.created) + "</td></tr>";
+    }).join("") + "</tbody></table>";
+}
+function loadStatusInto(sel, query, limit){
+  api("/api/status?" + query).then(function(v){
+    var el = $(sel); if (!el) return;
+    el.innerHTML = statusTable(v.rows.slice(0, limit || 50));
+    if (v.rows.some(function(r){ return r.status !== "끝"; }))
+      timer = setTimeout(function(){ loadStatusInto(sel, query, limit); }, 1000);
+  });
+}
+
+function pageStatus(sp){
+  var sub = sp.get("sub");
+  if (sub) return pageSub(sub);
+  var qy = [], title = "채점 현황";
+  if (sp.get("problem")) qy.push("problem=" + encodeURIComponent(sp.get("problem")));
+  if (sp.get("user")){ qy.push("user=" + encodeURIComponent(sp.get("user"))); title += " · " + esc(sp.get("user").replace(/^dev:/, "")); }
+  $("#main").innerHTML = "<h1>" + title + "</h1>"
+    + (sp.get("dup") ? '<div class="card">같은 파일을 이미 제출했습니다. 그때 결과를 보여드립니다 (제출 번호 ' + esc(sp.get("dup")) + ").</div>" : "")
+    + '<p class="dim small">결과는 테스트케이스 통과 수입니다. 어느 케이스가 어떤 조건인지는 공개하지 않습니다.</p><div class="scroll" id="st"></div>';
+  loadStatusInto("#st", qy.join("&"));
+}
+
+function pageSub(id){
+  api("/api/sub/" + id).then(function(r){
+    if (r.error){ $("#main").innerHTML = "<h1>" + esc(r.error) + "</h1>"; return; }
+    var h = "<h1>제출 " + r.id + "</h1><div class='card'>" + userLink(r.user, r.name) + " · <a href='/p/" + r.problem + "' data-go>" + r.problem + "번</a> · "
+      + when(r.created) + "<div style='font-size:20px;margin-top:8px'>" + verdictCell(r) + (r.score != null ? " · " + r.score + "점" : "") + "</div>";
+    if (Array.isArray(r.detail))
+      h += "<div class='cases'>" + r.detail.map(function(c){ return '<span class="' + (c["통과"] ? "y" : "n") + '">' + esc(c["케이스"]) + " " + (c["통과"] ? "통과" : "실패") + "</span>"; }).join("") + "</div>";
+    else if (r.detail && r.detail["오류"]) h += "<p class='msg err'>" + esc(r.detail["오류"]) + "</p>";
+    h += "</div>";
+    $("#main").innerHTML = h;
+    if (r.status !== "끝") timer = setTimeout(function(){ pageSub(id); }, 1000);
+  });
+}
+
+function pageRanking(pid){
+  api("/api/ranking/" + pid).then(function(rows){
+    var h = "<h1>순위</h1><p class='dim small'>사람마다 가장 높은 점수 하나. 같은 점수면 그 점수를 먼저 낸 사람이 위입니다.</p>"
+      + "<p><a href='/ranking?problem=1001' data-go" + (pid === "1001" ? " style='font-weight:800'" : "") + ">1001 벌처 무빙샷</a> · "
+      + "<a href='/ranking?problem=1002' data-go" + (pid === "1002" ? " style='font-weight:800'" : "") + ">1002 저글링 포위</a></p>";
+    if (!rows.length) h += '<div class="card dim">아직 채점된 제출이 없습니다.</div>';
+    else h += '<div class="scroll"><table class="tbl"><thead><tr><th class="num">등수</th><th>아이디</th><th>결과</th><th class="num">점수</th><th class="num">제출 수</th><th>그 점수를 낸 때</th></tr></thead><tbody>'
+      + rows.map(function(r){
+        return '<tr><td class="num">' + r.rank + "</td><td>" + userLink(r.user, r.name) + "</td><td><span class='" + vclass(r.verdict) + "'>" + esc(r.verdict)
+          + " <span class='dim small'>(" + r.passed + "/" + r.total + ")</span></span></td>"
+          + '<td class="num"><b>' + r.score + '</b></td><td class="num">' + r.tries + "</td><td class='dim'><a href='/status?sub=" + r.sub + "' data-go>" + when(r.at) + "</a></td></tr>";
+      }).join("") + "</tbody></table></div>";
+    $("#main").innerHTML = h;
+  });
+}
+
+function pageMe(){
+  if (ME){
+    $("#main").innerHTML = "<h1>" + esc(ME.name || ME.login) + "</h1><div class='card'>"
+      + "<a href='/status?user=" + encodeURIComponent(ME.login) + "' data-go>내 제출 보기</a> · <button class='btn' id='out'>로그아웃</button></div>";
+    $("#out").onclick = function(){ api("/api/logout", {method:"POST"}).then(function(){ location.href = "/"; }); };
+    return;
+  }
+  var h = "<h1>로그인</h1><div class='card'>";
+  if (CFG.github) h += "<a class='btn pri' href='/login'>깃허브로 로그인</a><p class='dim small'>이름과 프로필 사진만 받습니다. 저장소 권한은 받지 않습니다.</p>";
+  if (CFG.dev_login) h += "<p class='dim small' style='margin-top:14px'>시험용 로그인 (내 컴퓨터에서만 켜 두는 기능)</p>"
+    + "<input type='text' id='nm' placeholder='이름' maxlength='20'> <button class='btn' id='dl'>들어가기</button><div class='msg' id='msg'></div>";
+  if (!CFG.github && !CFG.dev_login) h += "<p>로그인이 아직 설정되지 않았습니다.</p>";
+  $("#main").innerHTML = h + "</div>";
+  if (CFG.dev_login) $("#dl").onclick = function(){
+    api("/api/dev-login", {method:"POST", body: JSON.stringify({name: $("#nm").value})}).then(function(r){
+      if (r.error){ $("#msg").className = "msg err"; $("#msg").textContent = r.error; return; }
+      boot("/");
+    });
+  };
+}
+
+function boot(url){
+  api("/api/me").then(function(v){
+    ME = v.user; CFG = v;
+    $("#meBox").innerHTML = ME ? (ME.avatar ? "<img src='" + esc(ME.avatar) + "' alt=''>" : "") + "<a href='/me' data-go>" + esc(ME.name || ME.login) + "</a>"
+                              : "<a class='btn' href='/me' data-go>로그인</a>";
+    go(url || location.pathname + location.search, !!url);
+  });
+}
+boot();
+</script>
+</body>
+</html>
