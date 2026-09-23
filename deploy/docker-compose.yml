@@ -1,0 +1,28 @@
+# 리눅스 서버 한 대용. 채점 서버 + HTTPS 앞단.
+#   docker compose up -d --build
+services:
+  aiarena:
+    build: { context: .., dockerfile: deploy/Dockerfile }
+    restart: always
+    environment:
+      ARENA_SECRET: ${ARENA_SECRET:?openssl rand -hex 32 로 만들어 .env 에 넣으세요}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      ARENA_DAILY_LIMIT: ${ARENA_DAILY_LIMIT:-10}
+    volumes:
+      - /srv/aiarena/mpq:/data/mpq:ro        # 블리자드 공식 AI 패키지 (서버에서 직접 받는다)
+      - /srv/aiarena/secret:/secret:ro       # 숨긴 케이스·숨긴 상대 전략
+      - /srv/aiarena/data:/data/arena        # DB·제출 파일
+    expose: ["8800"]
+
+  caddy:                                     # 도메인만 정하면 HTTPS 인증서를 알아서 받는다
+    image: caddy:2
+    restart: always
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?도메인을 .env 에 넣으세요}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+volumes:
+  caddy_data:

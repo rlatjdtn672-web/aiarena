@@ -86,9 +86,15 @@ def policy_of(w):
 
 
 def board_hash():
-    """판 버전. 엔진·맵·자리·유닛 중 하나라도 바뀌면 달라진다 → 점수는 이 판 안에서만 비교한다."""
+    """판 버전. 엔진·맵·자리·유닛 중 하나라도 바뀌면 달라진다 → 점수는 이 판 안에서만 비교한다.
+
+    엔진은 '실행 파일'이 아니라 '소스'로 센다. 맥에서 빌드한 것과 리눅스에서 빌드한 것은
+    파일이 달라도 판정이 똑같아서(실측 확인), 같은 판으로 봐야 케이스를 옮겨 쓸 수 있다.
+    """
+    src = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                       "engine", "bwmicro_sp.cpp")
     h = hashlib.sha256()
-    for p in (S.BIN, S.MAP):
+    for p in ((src if os.path.exists(src) else S.BIN), S.MAP):
         with open(p, "rb") as f:
             h.update(hashlib.sha256(f.read()).digest())
     h.update(json.dumps([S.SPOT, UNITS, FRAME_SKIP]).encode())
